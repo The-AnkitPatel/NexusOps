@@ -40,3 +40,21 @@ def test_metrics_endpoint_populates() -> None:
     resp = client.get("/v1/telemetry/metrics")
     assert resp.status_code == 200
     assert resp.json()["total_queries"] >= 1
+
+
+def test_stream_endpoint_emits_sse_events() -> None:
+    resp = client.post(
+        "/v1/agent/query/stream",
+        json={"query": "List all P0/P1 incidents across accounts and total downtime"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/event-stream")
+    body = resp.text
+    assert "event: step" in body
+    assert "event: final" in body
+    assert "event: done" in body
+
+
+def test_request_id_header_present() -> None:
+    resp = client.get("/v1/health")
+    assert resp.headers.get("X-Request-ID")
