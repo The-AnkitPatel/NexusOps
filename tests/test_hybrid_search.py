@@ -1,13 +1,9 @@
-"""Correctness of BM25, TF-IDF cosine, and RRF-fused hybrid retrieval."""
+"""Correctness of BM25, the TF-IDF embedder, and RRF-fused hybrid retrieval."""
 
 from __future__ import annotations
 
-from nexus.rag.hybrid_search import (
-    OkapiBM25,
-    TfidfIndex,
-    hybrid_retriever,
-    tokenize,
-)
+from nexus.rag.embeddings import TfidfEmbedder, get_embedder
+from nexus.rag.hybrid_search import OkapiBM25, hybrid_retriever, tokenize
 
 
 def test_bm25_ranks_matching_doc_higher() -> None:
@@ -19,14 +15,21 @@ def test_bm25_ranks_matching_doc_higher() -> None:
     assert scores[0] > scores[1]
 
 
-def test_tfidf_cosine_in_unit_range_and_discriminates() -> None:
-    corpus = [
-        tokenize("pii masking tokenization data sovereignty"),
-        tokenize("sla uptime financial credit"),
-    ]
-    scores = TfidfIndex(corpus).scores(tokenize("pii masking"))
+def test_tfidf_embedder_cosine_in_unit_range_and_discriminates() -> None:
+    emb = TfidfEmbedder()
+    matrix = emb.embed_documents(
+        [
+            "pii masking tokenization data sovereignty",
+            "sla uptime financial credit",
+        ]
+    )
+    scores = matrix @ emb.embed_query("pii masking")
     assert 0.0 <= scores[0] <= 1.0 + 1e-9
     assert scores[0] > scores[1]
+
+
+def test_default_embedder_is_tfidf_offline() -> None:
+    assert get_embedder().name == "tfidf"
 
 
 def test_hybrid_retrieves_sla_policy() -> None:

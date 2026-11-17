@@ -1,31 +1,25 @@
-"""Hybrid retrieval: Okapi BM25 (sparse) + TF-IDF cosine (dense), fused with RRF.
+"""Hybrid retrieval: Okapi BM25 (sparse) + a pluggable dense channel, fused by RRF.
 
-Design note (honesty first): the "dense" channel is a genuine TF-IDF vector space
-with L2-normalised cosine similarity -- a real vector retrieval method, computed
-exactly on numpy. It is deliberately NOT a neural embedding, so the gateway runs
-fully offline with no model download, no embedding service, and no API key. Both
-channels are standard, textbook-correct implementations; they are fused with
-Reciprocal Rank Fusion (RRF, k=60), the same rank-combination used by production
-hybrid search stacks (e.g. Elasticsearch, Vespa).
+The sparse channel is a textbook Okapi BM25. The dense channel is any
+:class:`~nexus.rag.embeddings.EmbeddingProvider` — TF-IDF cosine by default
+(exact, offline, numpy only), or real Gemini embeddings when a key is set. Both
+rank lists are combined with Reciprocal Rank Fusion (RRF, k=60), the same
+rank-combination used by production hybrid search stacks.
 """
 
 from __future__ import annotations
 
 import math
-import re
 from collections import Counter
 from typing import Any
 
 import numpy as np
 
 from nexus.rag.document_store import document_store
+from nexus.rag.embeddings import EmbeddingProvider, get_embedder, tokenize
 from nexus.state import Citation
 
-_TOKEN_RE = re.compile(r"\b\w+\b")
-
-
-def tokenize(text: str) -> list[str]:
-    return _TOKEN_RE.findall(text.lower())
+__all__ = ["OkapiBM25", "HybridRetriever", "hybrid_retriever", "tokenize"]
 
 
 class OkapiBM25:
@@ -42,7 +36,6 @@ class OkapiBM25:
         document_frequency: Counter[str] = Counter()
         for doc in corpus_tokens:
             document_frequency.update(set(doc))
-        # BM25 idf with +1 smoothing so every score stays non-negative.
         self.idf = {
             term: math.log(1.0 + (self.n_docs - freq + 0.5) / (freq + 0.5))
             for term, freq in document_frequency.items()
@@ -65,57 +58,6 @@ class OkapiBM25:
         return out
 
 
-class TfidfIndex:
-    """TF-IDF vector space with L2-normalised cosine similarity."""
-
-    def __init__(self, corpus_tokens: list[list[str]]) -> None:
-        self.vocab: dict[str, int] = {}
-        for doc in corpus_tokens:
-            for term in doc:
-                if term not in self.vocab:
-                    self.vocab[term] = len(self.vocab)
-
-        n_docs = len(corpus_tokens)
-        vocab_size = len(self.vocab)
-        df = np.zeros(vocab_size, dtype=float)
-        for doc in corpus_tokens:
-            for term in set(doc):
-                df[self.vocab[term]] += 1.0
-        # Smoothed idf (scikit-learn convention): log((1+n)/(1+df)) + 1.
-        self.idf = np.log((1.0 + n_docs) / (1.0 + df)) + 1.0
-
-        self.matrix = np.zeros((n_docs, vocab_size), dtype=float)
-        for i, doc in enumerate(corpus_tokens):
-            if not doc:
-                continue
-            for term, count in Counter(doc).items():
-                j = self.vocab[term]
-                self.matrix[i, j] = (count / len(doc)) * self.idf[j]
-        self.matrix = self._l2_normalize(self.matrix)
-
-    @staticmethod
-    def _l2_normalize(matrix: np.ndarray) -> np.ndarray:
-        norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-        norms[norms == 0.0] = 1.0
-        return matrix / norms
-
-    def _vectorize_query(self, query_tokens: list[str]) -> np.ndarray:
-        vec = np.zeros(len(self.vocab), dtype=float)
-        if not query_tokens:
-            return vec
-        for term, count in Counter(query_tokens).items():
-            j = self.vocab.get(term)
-            if j is not None:
-                vec[j] = (count / len(query_tokens)) * self.idf[j]
-        norm = np.linalg.norm(vec)
-        return vec / norm if norm else vec
-
-    def scores(self, query_tokens: list[str]) -> np.ndarray:
-        if self.matrix.size == 0:
-            return np.zeros(self.matrix.shape[0], dtype=float)
-        return self.matrix @ self._vectorize_query(query_tokens)
-
-
 class HybridRetriever:
     def __init__(self, rrf_k: int = 60) -> None:
         self.rrf_k = rrf_k
@@ -123,13 +65,21 @@ class HybridRetriever:
 
     def _build(self) -> None:
         self.docs: list[dict[str, Any]] = document_store.get_all()
-        corpus = [tokenize(d["title"] + " " + d["content"]) for d in self.docs]
-        self.bm25 = OkapiBM25(corpus)
-        self.tfidf = TfidfIndex(corpus)
+        self.embedder: EmbeddingProvider = get_embedder()
+        corpus_tokens = [tokenize(d["title"] + " " + d["content"]) for d in self.docs]
+        self.bm25 = OkapiBM25(corpus_tokens)
+        doc_texts = [d["title"] + " " + d["content"] for d in self.docs]
+        self.doc_matrix = (
+            self.embedder.embed_documents(doc_texts) if self.docs else np.zeros((0, 0), dtype=float)
+        )
+
+    def _dense_scores(self, query: str) -> np.ndarray:
+        if self.doc_matrix.size == 0:
+            return np.zeros(len(self.docs), dtype=float)
+        return self.doc_matrix @ self.embedder.embed_query(query)
 
     @staticmethod
     def _rank_map(scores: np.ndarray) -> dict[int, int]:
-        """Map doc index -> 0-based rank (0 = best), ties broken deterministically."""
         order = np.argsort(-scores, kind="stable")
         return {int(idx): rank for rank, idx in enumerate(order)}
 
@@ -139,9 +89,8 @@ class HybridRetriever:
         if not self.docs:
             return []
 
-        q_tokens = tokenize(query)
-        sparse = self.bm25.scores(q_tokens)
-        dense = self.tfidf.scores(q_tokens)
+        sparse = self.bm25.scores(tokenize(query))
+        dense = self._dense_scores(query)
         sparse_rank = self._rank_map(sparse)
         dense_rank = self._rank_map(dense)
 

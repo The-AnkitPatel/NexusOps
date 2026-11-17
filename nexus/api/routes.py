@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from nexus.agents.supervisor import supervisor_agent
 from nexus.config import settings
+from nexus.rag.hybrid_search import hybrid_retriever
 from nexus.state import NexusState
 from nexus.telemetry.metrics import metrics_collector
 from nexus.telemetry.tracer import otlp_enabled
@@ -45,5 +46,6 @@ def healthcheck() -> dict[str, Any]:
         "system": "NexusOps Enterprise Gateway",
         "version": settings.SERVICE_VERSION,
         "execution_mode": supervisor_agent.execution_mode,
+        "dense_embedder": hybrid_retriever.embedder.name,
         "otlp_export_enabled": otlp_enabled,
     }
