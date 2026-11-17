@@ -1,57 +1,149 @@
-import sqlite3
+"""Deterministic, schema-aware SQL planner with read-only execution.
+
+This agent is intentionally NOT an LLM. It maps a natural-language intent to a
+small, audited set of parameter-free ``SELECT`` templates, then runs them against
+a read-only SQLite connection. Determinism is the feature: there is zero SQL
+injection surface and zero chance of a hallucinated/destructive statement. Three
+independent guardrails apply:
+
+1. ``mode=ro`` URI connection -- the SQLite engine itself rejects every write.
+2. ``PRAGMA query_only = ON`` -- defence in depth at the connection level.
+3. A static check that each statement is a single ``SELECT``/``WITH`` and contains
+   no forbidden keyword, applied to BOTH the user query and the planned SQL.
+"""
+
+from __future__ import annotations
+
 import re
+import sqlite3
 import time
-from typing import Dict, Any, List, Tuple
+from typing import Any
+
 from nexus.config import settings
+from nexus.logging import get_logger
+
+logger = get_logger(__name__)
+
+_FORBIDDEN = (
+    "drop",
+    "delete",
+    "truncate",
+    "update",
+    "insert",
+    "alter",
+    "create",
+    "replace",
+    "attach",
+    "detach",
+    "pragma",
+    "grant",
+    "vacuum",
+)
+
+
+class SQLGuardrailError(ValueError):
+    """Raised when a query is rejected by the read-only guardrail."""
+
 
 class SQLAgent:
-    def __init__(self, db_path: str = settings.DATABASE_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: str | None = None) -> None:
+        self.db_path = db_path or settings.DATABASE_PATH
 
-    def _generate_sql(self, query: str) -> str:
-        """
-        Translates natural language questions into safe SELECT queries.
-        In production FDE setting, this is guided by prompt constraints & schema introspection.
-        """
-        q = query.lower()
-        
-        if "apollo" in q:
-            return "SELECT ticket_id, severity, service_impacted, downtime_minutes, status FROM incident_tickets WHERE account_id = 'ACC-101'"
-        elif "finsecure" in q or "bank" in q:
-            return "SELECT ticket_id, severity, service_impacted, downtime_minutes, status FROM incident_tickets WHERE account_id = 'ACC-102'"
-        elif "p0" in q or "p1" in q or "critical" in q:
-            return "SELECT a.company_name, t.ticket_id, t.severity, t.service_impacted, t.downtime_minutes FROM incident_tickets t JOIN accounts a ON t.account_id = a.account_id WHERE t.severity IN ('P0', 'P1')"
-        elif "downtime" in q or "outage" in q:
-            return "SELECT a.company_name, SUM(t.downtime_minutes) as total_downtime, COUNT(t.ticket_id) as total_tickets FROM incident_tickets t JOIN accounts a ON t.account_id = a.account_id GROUP BY a.company_name"
-        elif "account" in q or "client" in q or "mrr" in q:
-            return "SELECT account_id, company_name, tier, mrr_usd, assigned_fde FROM accounts ORDER BY mrr_usd DESC"
-        else:
-            return "SELECT ticket_id, account_id, severity, service_impacted, status FROM incident_tickets LIMIT 5"
-
-    def execute_query(self, query: str) -> Tuple[str, List[Dict[str, Any]], float]:
-        start = time.time()
-        
-        # Security Guardrail: Reject destructive statements in raw query or generated SQL
-        forbidden = ["drop", "delete", "truncate", "update", "insert", "alter"]
-        for word in forbidden:
-            if re.search(rf"\b{word}\b", query, re.IGNORECASE):
-                raise ValueError(f"Dangerous SQL query blocked by FDE Guardrail: {word}")
-
-        sql = self._generate_sql(query)
-        for word in forbidden:
-            if re.search(rf"\b{word}\b", sql, re.IGNORECASE):
-                raise ValueError(f"Dangerous SQL query blocked by FDE Guardrail: {word}")
-
-        conn = sqlite3.connect(self.db_path)
+    # -- connection ---------------------------------------------------------
+    def _connect_readonly(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-        
-        results = [dict(row) for row in rows]
-        conn.close()
-        duration_ms = (time.time() - start) * 1000.0
-        
-        return sql, results, round(duration_ms, 2)
+        conn.execute("PRAGMA query_only = ON;")
+        return conn
+
+    def introspect_schema(self) -> dict[str, list[str]]:
+        """Return {table: [columns]} read live from the database catalog."""
+        schema: dict[str, list[str]] = {}
+        conn = self._connect_readonly()
+        try:
+            tables = conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            ).fetchall()
+            for row in tables:
+                table = row["name"]
+                cols = conn.execute(f'PRAGMA table_info("{table}")').fetchall()
+                schema[table] = [c["name"] for c in cols]
+        finally:
+            conn.close()
+        return schema
+
+    # -- planning -----------------------------------------------------------
+    def plan_sql(self, query: str) -> str:
+        """Map a natural-language query to a vetted read-only SELECT template."""
+        q = query.lower()
+        if "apollo" in q:
+            return (
+                "SELECT ticket_id, severity, service_impacted, downtime_minutes, status "
+                "FROM incident_tickets WHERE account_id = 'ACC-101'"
+            )
+        if "finsecure" in q or "bank" in q:
+            return (
+                "SELECT ticket_id, severity, service_impacted, downtime_minutes, status "
+                "FROM incident_tickets WHERE account_id = 'ACC-102'"
+            )
+        if "p0" in q or "p1" in q or "critical" in q:
+            return (
+                "SELECT a.company_name, t.ticket_id, t.severity, t.service_impacted, "
+                "t.downtime_minutes FROM incident_tickets t "
+                "JOIN accounts a ON t.account_id = a.account_id "
+                "WHERE t.severity IN ('P0', 'P1')"
+            )
+        if "downtime" in q or "outage" in q:
+            return (
+                "SELECT a.company_name, SUM(t.downtime_minutes) AS total_downtime, "
+                "COUNT(t.ticket_id) AS total_tickets FROM incident_tickets t "
+                "JOIN accounts a ON t.account_id = a.account_id GROUP BY a.company_name"
+            )
+        if "account" in q or "client" in q or "mrr" in q:
+            return (
+                "SELECT account_id, company_name, tier, mrr_usd, assigned_fde "
+                "FROM accounts ORDER BY mrr_usd DESC"
+            )
+        return (
+            "SELECT ticket_id, account_id, severity, service_impacted, status "
+            "FROM incident_tickets LIMIT 5"
+        )
+
+    # -- guardrails ---------------------------------------------------------
+    def _assert_safe(self, text: str, label: str) -> None:
+        for word in _FORBIDDEN:
+            if re.search(rf"\b{word}\b", text, re.IGNORECASE):
+                logger.warning("Read-only guardrail blocked %s (forbidden token: %s)", label, word)
+                raise SQLGuardrailError(
+                    f"Read-only guardrail blocked {label}: '{word}' is not permitted"
+                )
+
+    @staticmethod
+    def _assert_single_select(sql: str) -> None:
+        stripped = sql.strip().rstrip(";")
+        if ";" in stripped:
+            raise SQLGuardrailError("Multiple SQL statements are not permitted")
+        if not re.match(r"(?is)^\s*(select|with)\b", stripped):
+            raise SQLGuardrailError("Only SELECT / WITH read queries are permitted")
+
+    # -- execution ----------------------------------------------------------
+    def execute_query(self, query: str) -> tuple[str, list[dict[str, Any]], float]:
+        start = time.perf_counter()
+        self._assert_safe(query, "user query")
+
+        sql = self.plan_sql(query)
+        self._assert_safe(sql, "planned SQL")
+        self._assert_single_select(sql)
+
+        conn = self._connect_readonly()
+        try:
+            results = [dict(row) for row in conn.execute(sql).fetchall()]
+        finally:
+            conn.close()
+
+        duration_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return sql, results, duration_ms
+
 
 sql_agent = SQLAgent()
