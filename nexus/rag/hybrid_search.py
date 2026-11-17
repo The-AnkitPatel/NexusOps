@@ -1,10 +1,7 @@
-"""Hybrid retrieval: Okapi BM25 (sparse) + a pluggable dense channel, fused by RRF.
+"""Hybrid retrieval: Okapi BM25 + a pluggable dense channel, fused with RRF.
 
-The sparse channel is a textbook Okapi BM25. The dense channel is any
-:class:`~nexus.rag.embeddings.EmbeddingProvider` — TF-IDF cosine by default
-(exact, offline, numpy only), or real Gemini embeddings when a key is set. Both
-rank lists are combined with Reciprocal Rank Fusion (RRF, k=60), the same
-rank-combination used by production hybrid search stacks.
+Dense defaults to TF-IDF cosine (see embeddings.py). The BM25 and dense rank
+lists are combined with Reciprocal Rank Fusion (k=60).
 """
 
 from __future__ import annotations
@@ -15,15 +12,18 @@ from typing import Any
 
 import numpy as np
 
+from nexus.logging import get_logger
 from nexus.rag.document_store import document_store
-from nexus.rag.embeddings import EmbeddingProvider, get_embedder, tokenize
+from nexus.rag.embeddings import EmbeddingProvider, TfidfEmbedder, get_embedder, tokenize
 from nexus.state import Citation
+
+logger = get_logger(__name__)
 
 __all__ = ["OkapiBM25", "HybridRetriever", "hybrid_retriever", "tokenize"]
 
 
 class OkapiBM25:
-    """Textbook Okapi BM25 ranking over a fixed corpus."""
+    """Okapi BM25 ranking over a fixed corpus."""
 
     def __init__(self, corpus_tokens: list[list[str]], k1: float = 1.5, b: float = 0.75) -> None:
         self.k1 = k1
@@ -36,6 +36,7 @@ class OkapiBM25:
         document_frequency: Counter[str] = Counter()
         for doc in corpus_tokens:
             document_frequency.update(set(doc))
+        # +1 smoothing keeps every idf non-negative.
         self.idf = {
             term: math.log(1.0 + (self.n_docs - freq + 0.5) / (freq + 0.5))
             for term, freq in document_frequency.items()
@@ -65,13 +66,26 @@ class HybridRetriever:
 
     def _build(self) -> None:
         self.docs: list[dict[str, Any]] = document_store.get_all()
-        self.embedder: EmbeddingProvider = get_embedder()
         corpus_tokens = [tokenize(d["title"] + " " + d["content"]) for d in self.docs]
         self.bm25 = OkapiBM25(corpus_tokens)
-        doc_texts = [d["title"] + " " + d["content"] for d in self.docs]
-        self.doc_matrix = (
-            self.embedder.embed_documents(doc_texts) if self.docs else np.zeros((0, 0), dtype=float)
-        )
+        self.embedder: EmbeddingProvider = get_embedder()
+        self.doc_matrix = self._embed_corpus([d["title"] + " " + d["content"] for d in self.docs])
+
+    def _embed_corpus(self, doc_texts: list[str]) -> np.ndarray:
+        if not self.docs:
+            return np.zeros((0, 0), dtype=float)
+        try:
+            return self.embedder.embed_documents(doc_texts)
+        except Exception as exc:
+            # A failing embedder (e.g. Gemini network error) must not take the
+            # gateway down at startup: fall back to the offline TF-IDF channel.
+            logger.warning(
+                "Dense embedder '%s' failed (%s); falling back to TF-IDF",
+                self.embedder.name,
+                exc,
+            )
+            self.embedder = TfidfEmbedder()
+            return self.embedder.embed_documents(doc_texts)
 
     def _dense_scores(self, query: str) -> np.ndarray:
         if self.doc_matrix.size == 0:

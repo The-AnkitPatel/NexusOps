@@ -52,3 +52,21 @@ def test_retrieve_empty_query_is_safe() -> None:
     citations = hybrid_retriever.retrieve("", top_k=2)
     assert isinstance(citations, list)
     assert len(citations) <= 2
+
+
+def test_retriever_falls_back_when_embedder_fails(monkeypatch) -> None:
+    from nexus.rag import hybrid_search
+
+    class _Boom:
+        name = "boom"
+
+        def embed_documents(self, docs: list[str]):
+            raise RuntimeError("embedder down")
+
+        def embed_query(self, query: str):
+            raise RuntimeError("embedder down")
+
+    monkeypatch.setattr(hybrid_search, "get_embedder", lambda: _Boom())
+    retriever = hybrid_search.HybridRetriever()
+    assert retriever.embedder.name == "tfidf"
+    assert retriever.retrieve("uptime SLA", top_k=1)

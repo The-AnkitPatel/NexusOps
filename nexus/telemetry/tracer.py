@@ -1,9 +1,7 @@
-"""OpenTelemetry tracing conforming to GenAI semantic conventions.
+"""OpenTelemetry tracing (GenAI semantic conventions).
 
-Spans are always captured by an in-memory exporter (the API/UI read it to show a
-live trace log). When ``OTEL_EXPORTER_OTLP_ENDPOINT`` is set, spans are ALSO
-shipped to a real OTLP/HTTP collector (Jaeger, Grafana Tempo, or the OTel
-Collector fronting Google Cloud Trace) via a batch processor.
+Spans go to an in-memory exporter (read by the API/UI). When
+OTEL_EXPORTER_OTLP_ENDPOINT is set they are also batched to an OTLP/HTTP collector.
 """
 
 from __future__ import annotations
@@ -79,7 +77,7 @@ def record_genai_span(
         span.set_attribute("gen_ai.usage.prompt_tokens", prompt_tokens)
         span.set_attribute("gen_ai.usage.completion_tokens", completion_tokens)
         span.set_attribute("gen_ai.usage.total_tokens", prompt_tokens + completion_tokens)
-        # Cost is a custom (non-semconv) attribute, namespaced honestly:
+        # Cost is a custom (non-semconv) attribute.
         span.set_attribute("nexus.usage.cost_usd", cost_usd)
         if attributes:
             for key, value in attributes.items():

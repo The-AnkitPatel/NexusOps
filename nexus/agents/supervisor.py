@@ -1,13 +1,8 @@
-"""Hierarchical supervisor that routes a query across specialist agents.
+"""Supervisor that routes a query across the specialist agents.
 
-Routing is a deterministic keyword classifier (not an LLM) -- fast, free, and
-fully auditable. Synthesis uses Gemini when ``GEMINI_API_KEY`` is set, and falls
-back to a deterministic enterprise-report template otherwise, so the pipeline
-never fails and runs with zero external dependencies in offline mode.
-
-Token counts recorded in the trace are ESTIMATES derived from each step's real
-input/output text (see ``cost_calculator.estimate_tokens``); in live mode the
-provider's ``usage`` metadata would replace them.
+Routing and synthesis use Gemini when GEMINI_API_KEY is set, and fall back to a
+keyword classifier and a report template otherwise. Trace token counts are
+estimates (see cost_calculator.estimate_tokens).
 """
 
 from __future__ import annotations
@@ -72,10 +67,9 @@ class SupervisorAgent:
                 logger.warning("Failed to initialise Google GenAI client: %s", exc)
 
     def _classify_intent(self, query: str) -> str:
-        """Route the query. Uses Gemini when available, else the keyword classifier.
+        """Route the query: Gemini when available, else the keyword classifier.
 
-        Note: the LLM only *routes*; it never emits SQL. Executable SQL always comes
-        from the deterministic, read-only planner -- so there is no LLM-injection path.
+        The LLM only routes; executable SQL always comes from the read-only planner.
         """
         if self.client is not None:
             label = self._classify_intent_llm(query)

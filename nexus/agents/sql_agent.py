@@ -1,15 +1,12 @@
-"""Deterministic, schema-aware SQL planner with read-only execution.
+"""Schema-aware SQL planner with read-only execution.
 
-This agent is intentionally NOT an LLM. It maps a natural-language intent to a
-small, audited set of parameter-free ``SELECT`` templates, then runs them against
-a read-only SQLite connection. Determinism is the feature: there is zero SQL
-injection surface and zero chance of a hallucinated/destructive statement. Three
-independent guardrails apply:
+Maps a query to one of a fixed set of parameter-free SELECT templates and runs it
+on a read-only connection. Guardrails:
 
-1. ``mode=ro`` URI connection -- the SQLite engine itself rejects every write.
-2. ``PRAGMA query_only = ON`` -- defence in depth at the connection level.
-3. A static check that each statement is a single ``SELECT``/``WITH`` and contains
-   no forbidden keyword, applied to BOTH the user query and the planned SQL.
+1. mode=ro URI connection (the engine rejects writes).
+2. PRAGMA query_only = ON.
+3. single-statement SELECT/WITH check + forbidden-keyword scan, applied to both
+   the user query and the planned SQL.
 """
 
 from __future__ import annotations

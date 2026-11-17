@@ -1,9 +1,7 @@
 """Token estimation and USD cost accounting.
 
-No live LLM call is made in offline mode, so there is no provider-returned token
-count. We therefore *estimate* tokens from real text using the well-known
-~4-characters-per-token heuristic and label every number as an estimate. In live
-mode the provider's ``usage`` metadata would replace :func:`estimate_tokens`.
+Offline mode has no provider token count, so tokens are estimated from text at
+~4 chars/token. Live mode would use the provider's usage metadata instead.
 """
 
 from __future__ import annotations

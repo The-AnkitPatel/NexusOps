@@ -13,19 +13,17 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # --- LLM provider -------------------------------------------------------
-    # Empty key => the gateway runs in deterministic offline mode (no network).
+    # Empty => offline mode (no network).
     GEMINI_API_KEY: str = ""
     NEXUS_MODEL: str = "gemini-2.5-flash"
-    # Honest GenAI semantic-convention system id. This project calls the Gemini
-    # Developer API (api_key auth), which is "gemini" -- NOT "vertex_ai".
+    # GenAI semconv system id: "gemini" (Developer API) or "vertex_ai".
     GEN_AI_SYSTEM: str = "gemini"
 
     # --- Service / telemetry ------------------------------------------------
     SERVICE_VERSION: str = "0.3.0"
     OTEL_SERVICE_NAME: str = "nexusops-enterprise-gateway"
     DEPLOYMENT_ENV: str = "production-fde"
-    # When set (e.g. http://localhost:4318/v1/traces) spans are ALSO exported to
-    # a real OTLP/HTTP collector. When empty, only the in-memory exporter runs.
+    # Set to an OTLP/HTTP collector URL (e.g. http://localhost:4318/v1/traces).
     OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
     LOG_LEVEL: str = "INFO"
 

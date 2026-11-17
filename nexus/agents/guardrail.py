@@ -1,9 +1,8 @@
-"""Grounding verification and PII masking guardrail.
+"""Grounding check and PII masking.
 
-Groundedness is a transparent token-overlap proxy: the fraction of the response's
-content tokens that also appear in the retrieved evidence (citations + SQL rows).
-It is a lightweight heuristic -- honest about being a proxy, not a learned NLI
-model -- and is paired with deterministic regex PII masking on the final output.
+Groundedness is a token-overlap proxy: the share of the response's content tokens
+that also appear in the retrieved evidence (citations + SQL rows). Paired with
+regex PII masking on the final output.
 """
 
 from __future__ import annotations

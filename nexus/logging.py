@@ -1,9 +1,4 @@
-"""Structured JSON logging for the gateway.
-
-A single JSON-per-line handler on the ``nexus`` logger tree. JSON logs are the
-norm for anything that ships to Cloud Logging / Loki, and they keep PII-masking
-and trace correlation easy to reason about.
-"""
+"""JSON logging for the gateway: one JSON object per line on the `nexus` logger."""
 
 from __future__ import annotations
 

@@ -1,12 +1,8 @@
-"""Pluggable dense-embedding providers for the hybrid retriever.
+"""Dense-embedding providers for the retriever.
 
-The retriever's "dense" channel is defined by an :class:`EmbeddingProvider`:
-- :class:`TfidfEmbedder` (default) — exact TF-IDF vectors on numpy, fully offline.
-- :class:`GeminiEmbedder` — real neural embeddings via the Gemini API, used only
-  when ``GEMINI_API_KEY`` is set; it degrades gracefully to TF-IDF otherwise.
-
-Both return **L2-normalised** vectors, so cosine similarity is a plain dot product.
-This keeps "swap in real embeddings" a one-line change behind a stable interface.
+TfidfEmbedder is the default (numpy, offline). GeminiEmbedder is used when
+GEMINI_API_KEY is set, and get_embedder() falls back to TF-IDF otherwise. Both
+return L2-normalised vectors, so cosine similarity is a dot product.
 """
 
 from __future__ import annotations
