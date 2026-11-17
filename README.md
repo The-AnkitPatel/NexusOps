@@ -12,7 +12,7 @@ Runs fully offline with no API key; a live Gemini path is opt-in.
 <img alt="Python" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white">
 <img alt="Lint" src="https://img.shields.io/badge/lint-ruff-261230?logo=ruff&logoColor=white">
 <img alt="Types" src="https://img.shields.io/badge/types-mypy-1F5082">
-<img alt="Tests" src="https://img.shields.io/badge/tests-37%20passing-brightgreen">
+<img alt="Tests" src="https://img.shields.io/badge/tests-38%20passing-brightgreen">
 <img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue">
 </p>
 
@@ -65,8 +65,8 @@ python data/init_db.py
 ```
 
 ```bash
-uvicorn nexus.api.server:app --port 8000     # API + docs at :8000/docs
-streamlit run ui/app.py                      # UI at :8501
+uvicorn nexus.api.server:app --port 8000     # UI at :8000/, API docs at :8000/docs
+streamlit run ui/app.py                      # alternative Streamlit UI at :8501
 ```
 
 Or with Docker (API, UI, OpenTelemetry Collector, Jaeger):
@@ -82,6 +82,7 @@ synthesis, and embeddings switch to Gemini with the offline path kept as fallbac
 
 | Method | Path | Description |
 |---|---|---|
+| `GET` | `/` | Real-time web command center (UI) |
 | `POST` | `/v1/agent/query` | Run the pipeline; returns the full state with citations, SQL, trace, tokens, cost |
 | `POST` | `/v1/agent/query/stream` | Same pipeline streamed as Server-Sent Events |
 | `GET` | `/v1/telemetry/metrics` | Latency percentiles, tokens, cost, guardrail rate |

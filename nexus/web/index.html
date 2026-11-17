@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NexusOps Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#070a12; --panel:rgba(255,255,255,.035); --line:rgba(255,255,255,.09);
+    --fg:#e6edf3; --mut:#8b98a9; --cy:#22d3ee; --vi:#a78bfa; --gr:#34d399;
+    --am:#fbbf24; --rd:#f87171; --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:Inter,system-ui,sans-serif;color:var(--fg);background:var(--bg);
+    background-image:
+      radial-gradient(900px 500px at 15% -10%,rgba(34,211,238,.10),transparent 60%),
+      radial-gradient(900px 600px at 95% 0%,rgba(167,139,250,.10),transparent 55%),
+      linear-gradient(transparent 0 97%,rgba(255,255,255,.03) 97%),
+      linear-gradient(90deg,transparent 0 97%,rgba(255,255,255,.03) 97%);
+    background-size:auto,auto,26px 26px,26px 26px;
+    min-height:100%;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 72px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--cy),var(--vi));
+    box-shadow:0 0 26px rgba(34,211,238,.45);position:relative}
+  .logo::after{content:"";position:absolute;inset:7px;border-radius:7px;background:var(--bg);opacity:.55}
+  h1{font-size:19px;font-weight:800;letter-spacing:.2px;margin:0}
+  .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
+  .pill{font-size:11.5px;font-weight:600;color:var(--mut);border:1px solid var(--line);
+    padding:7px 12px;border-radius:999px;background:var(--panel)}
+  .pill b{color:var(--cy)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    backdrop-filter:blur(8px);padding:18px}
+  .ask{display:flex;gap:10px;flex-wrap:wrap}
+  .ask input{flex:1;min-width:260px;background:rgba(0,0,0,.35);border:1px solid var(--line);
+    color:var(--fg);border-radius:12px;padding:14px 16px;font-size:14.5px;outline:none}
+  .ask input:focus{border-color:var(--cy);box-shadow:0 0 0 3px rgba(34,211,238,.14)}
+  .run{background:linear-gradient(135deg,var(--cy),var(--vi));color:#06121a;font-weight:800;
+    border:0;border-radius:12px;padding:0 22px;font-size:14.5px;cursor:pointer;letter-spacing:.2px;
+    box-shadow:0 8px 26px rgba(34,211,238,.28);transition:transform .12s}
+  .run:active{transform:translateY(1px)}
+  .run:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .chip{font-size:12px;color:var(--mut);border:1px solid var(--line);background:rgba(0,0,0,.25);
+    padding:7px 11px;border-radius:999px;cursor:pointer;transition:.15s}
+  .chip:hover{color:var(--fg);border-color:var(--cy)}
+  .grid{display:grid;gap:16px;margin-top:16px}
+  @media(min-width:900px){.two{grid-template-columns:1fr 1fr}}
+  .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--mut);font-weight:700;margin:0 0 12px}
+  /* pipeline */
+  .flow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:4px 2px}
+  .node{min-width:150px;flex:1;border:1px solid var(--line);border-radius:14px;padding:13px 13px 12px;
+    background:rgba(0,0,0,.22);position:relative;transition:.3s;opacity:.5}
+  .node .nn{font-size:13px;font-weight:700}
+  .node .na{font-size:11px;color:var(--mut);margin-top:3px;font-family:var(--mono);min-height:14px}
+  .node .ms{position:absolute;top:11px;right:12px;font-size:11px;color:var(--mut);font-family:var(--mono)}
+  .node .dot{width:8px;height:8px;border-radius:50%;background:#394150;display:inline-block;margin-right:7px;vertical-align:1px}
+  .node.on{opacity:1;border-color:var(--cy);box-shadow:0 0 0 1px rgba(34,211,238,.4),0 10px 30px rgba(34,211,238,.14);transform:translateY(-2px)}
+  .node.on .dot{background:var(--cy);box-shadow:0 0 12px var(--cy);animation:pulse 1s infinite}
+  .node.done{opacity:1;border-color:rgba(52,211,153,.5)}
+  .node.done .dot{background:var(--gr);box-shadow:0 0 10px var(--gr);animation:none}
+  .conn{align-self:center;min-width:30px;height:2px;background:#20262f;position:relative;flex:0 0 30px}
+  .conn.live{background:linear-gradient(90deg,var(--cy),var(--vi));
+    box-shadow:0 0 12px rgba(34,211,238,.5);background-size:200% 100%;animation:flow 1s linear infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  @keyframes flow{to{background-position:200% 0}}
+  /* metrics */
+  .mrow{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(min-width:620px){.mrow{grid-template-columns:repeat(4,1fr)}}
+  .metric{border:1px solid var(--line);border-radius:13px;padding:13px 14px;background:rgba(0,0,0,.2)}
+  .metric .k{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+  .metric .v{font-size:21px;font-weight:800;margin-top:5px;font-family:var(--mono)}
+  .v.cy{color:var(--cy)} .v.gr{color:var(--gr)} .v.vi{color:var(--vi)} .v.am{color:var(--am)}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
+  .tag.ok{color:var(--gr);background:rgba(52,211,153,.12)} .tag.bad{color:var(--rd);background:rgba(248,113,113,.12)}
+  /* answer */
+  .answer{font-size:14.5px;line-height:1.65;white-space:pre-wrap;min-height:40px}
+  .answer b{color:#fff}
+  .cursor{display:inline-block;width:8px;height:17px;background:var(--cy);vertical-align:-3px;
+    margin-left:1px;animation:blink .9s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  pre.sql{font-family:var(--mono);font-size:12.5px;color:var(--cy);background:rgba(0,0,0,.4);
+    border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto;margin:0}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600;text-transform:uppercase;font-size:10.5px;letter-spacing:.6px}
+  td{font-family:var(--mono)}
+  .cite{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-top:10px;background:rgba(0,0,0,.2)}
+  .cite .ct{font-weight:700;font-size:13px}
+  .cite .cs{font-size:11px;color:var(--mut);font-family:var(--mono);margin:5px 0 7px}
+  .cite .cx{font-size:12.5px;color:#c7d0db;line-height:1.5}
+  .muted{color:var(--mut);font-size:13px}
+  .hidden{display:none}
+  footer{margin-top:26px;color:var(--mut);font-size:12px;text-align:center}
+  footer code{font-family:var(--mono);color:#aeb8c4}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>NexusOps Command Center</h1>
+        <div class="sub">Multi-agent gateway over enterprise SQL and policy documents</div>
+      </div>
+    </div>
+    <div class="pill" id="modePill">mode <b id="modeVal">...</b></div>
+  </header>
+
+  <div class="card">
+    <div class="ask">
+      <input id="q" placeholder="Ask about incidents, SLAs, credits, accounts..."
+        value="Does Apollo qualify for an SLA credit on their P1 Cloud SQL ticket?" />
+      <button class="run" id="run">Run</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="card grid" style="margin-top:16px">
+    <p class="lbl">Agent pipeline</p>
+    <div class="flow" id="flow"></div>
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+    <div class="mrow" id="metrics"></div>
+  </div>
+
+  <div class="grid two" style="margin-top:16px">
+    <div class="card">
+      <p class="lbl">Answer</p>
+      <div class="answer" id="answer"><span class="muted">Run a query to see the agents work.</span></div>
+    </div>
+    <div class="card">
+      <p class="lbl">Evidence</p>
+      <div id="evidence"><span class="muted">SQL and cited policies appear here.</span></div>
+    </div>
+  </div>
+
+  <footer>Streamed live from <code>POST /v1/agent/query/stream</code> &nbsp;|&nbsp; API docs at <code>/docs</code></footer>
+</div>
+
+<script>
+const NODES = [
+  ["SupervisorAgent","Supervisor","Routing intent"],
+  ["RetrieverAgent","Retriever","Hybrid BM25 + dense"],
+  ["SQLAgent","SQL Planner","Read-only query"],
+  ["SynthesisEngine","Synthesis","Compose answer"],
+  ["GuardrailAgent","Guardrail","Grounding + PII"],
+];
+const PRESETS = [
+  "Does Apollo qualify for an SLA credit on their P1 Cloud SQL ticket?",
+  "List all P0/P1 incidents across accounts and total downtime",
+  "What is the enterprise PII masking standard under POL-SEC-002?",
+  "Top accounts by MRR and their assigned FDE",
+];
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function buildFlow(){
+  const f = $("#flow"); f.innerHTML = "";
+  NODES.forEach(([id,name,act],i)=>{
+    const n = document.createElement("div");
+    n.className = "node"; n.id = "node-"+id;
+    n.innerHTML = `<div class="ms"></div><div class="nn"><span class="dot"></span>${name}</div><div class="na">${act}</div>`;
+    f.appendChild(n);
+    if(i < NODES.length-1){ const c=document.createElement("div"); c.className="conn"; c.id="conn-"+i; f.appendChild(c); }
+  });
+}
+function buildChips(){
+  const c = $("#chips"); c.innerHTML="";
+  PRESETS.forEach(p=>{ const b=document.createElement("button"); b.className="chip";
+    b.textContent = p.length>52 ? p.slice(0,52)+"..." : p;
+    b.onclick=()=>{ $("#q").value=p; }; c.appendChild(b); });
+}
+function resetUI(){
+  document.querySelectorAll(".node").forEach(n=>{n.classList.remove("on","done");
+    n.querySelector(".ms").textContent="";});
+  document.querySelectorAll(".conn").forEach(c=>c.classList.remove("live"));
+  $("#metrics").innerHTML=""; $("#answer").innerHTML=`<span class="muted">Orchestrating agents...</span>`;
+  $("#evidence").innerHTML=`<span class="muted">...</span>`;
+}
+function metricCard(k,v,cls){
+  return `<div class="metric"><div class="k">${k}</div><div class="v ${cls||''}">${v}</div></div>`;
+}
+
+async function animateStep(agent, ms){
+  const node = $("#node-"+agent); if(!node) return;
+  const idx = NODES.findIndex(n=>n[0]===agent);
+  if(idx>0){ const c=$("#conn-"+(idx-1)); if(c) c.classList.add("live"); }
+  node.classList.add("on");
+  node.querySelector(".ms").textContent = (ms!=null? ms.toFixed(2)+"ms":"");
+  await sleep(430);
+  node.classList.remove("on"); node.classList.add("done");
+  if(idx>0){ const c=$("#conn-"+(idx-1)); if(c) c.classList.remove("live"); }
+}
+
+function renderMetrics(s){
+  const g = Math.round((s.groundedness_score||0)*100);
+  const gok = s.guardrail_status==="PASSED";
+  $("#metrics").innerHTML =
+    metricCard("Intent", (s.intent||"-").replace("_"," "), "vi") +
+    metricCard("Groundedness", g+"%", "gr") +
+    metricCard("Guardrail", `<span class="tag ${gok?'ok':'bad'}">${s.guardrail_status}</span>`, "") +
+    metricCard("Latency", (s.total_latency_ms||0)+" ms", "cy") +
+    metricCard("Tokens", s.total_tokens||0, "cy") +
+    metricCard("Cost", "$"+(s.total_cost_usd||0).toFixed(6), "am") +
+    metricCard("Mode", s.execution_mode==="live_gemini"?"Live Gemini":"Offline", "vi") +
+    metricCard("Citations", (s.retrieved_citations||[]).length, "cy");
+}
+
+function renderEvidence(s){
+  let h="";
+  if(s.sql_query){
+    h += `<p class="lbl">Database query</p><pre class="sql">${esc(s.sql_query)}</pre>`;
+    if((s.sql_results||[]).length){
+      const cols = Object.keys(s.sql_results[0]);
+      h += `<table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>`;
+      h += s.sql_results.slice(0,5).map(r=>`<tr>${cols.map(c=>`<td>${esc(String(r[c]))}</td>`).join("")}</tr>`).join("");
+      h += `</tbody></table>`;
+    }
+  }
+  if((s.retrieved_citations||[]).length){
+    h += `<p class="lbl" style="margin-top:14px">Cited policies</p>`;
+    h += s.retrieved_citations.map(c=>`<div class="cite"><div class="ct">[${esc(c.document_id)}] ${esc(c.section_title)}</div>
+      <div class="cs">RRF ${c.relevance_score} &nbsp; BM25 ${c.bm25_score} &nbsp; dense ${c.dense_score}</div>
+      <div class="cx">${esc(c.snippet)}</div></div>`).join("");
+  }
+  $("#evidence").innerHTML = h || `<span class="muted">No structured evidence for this intent.</span>`;
+}
+
+async function typeAnswer(text){
+  const el = $("#answer"); el.innerHTML="";
+  const span = document.createElement("span"); const cur=document.createElement("span");
+  cur.className="cursor"; el.appendChild(span); el.appendChild(cur);
+  const tokens = text.split(/(\s+)/);
+  for(const t of tokens){ span.textContent += t; await sleep(12); }
+  cur.remove();
+  span.innerHTML = span.textContent.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+}
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+async function parseStream(resp, onEvent){
+  const reader = resp.body.getReader(); const dec = new TextDecoder();
+  let buf="";
+  while(true){
+    const {value,done} = await reader.read(); if(done) break;
+    buf += dec.decode(value,{stream:true});
+    let i;
+    while((i = buf.indexOf("\n\n")) >= 0){
+      const block = buf.slice(0,i); buf = buf.slice(i+2);
+      let ev="message", data="";
+      block.split("\n").forEach(l=>{
+        if(l.startsWith("event:")) ev=l.slice(6).trim();
+        else if(l.startsWith("data:")) data+=l.slice(5).trim();
+      });
+      if(data) onEvent(ev, JSON.parse(data));
+    }
+  }
+}
+
+async function run(){
+  const q = $("#q").value.trim(); if(!q) return;
+  const btn=$("#run"); btn.disabled=true; resetUI();
+  const steps=[]; let finalState=null;
+  try{
+    const resp = await fetch("/v1/agent/query/stream",{method:"POST",
+      headers:{"content-type":"application/json"}, body:JSON.stringify({query:q})});
+    if(!resp.ok){ $("#answer").innerHTML=`<span class="tag bad">HTTP ${resp.status}</span>`; btn.disabled=false; return; }
+    await parseStream(resp,(ev,data)=>{
+      if(ev==="step") steps.push(data);
+      else if(ev==="final") finalState=data;
+    });
+  }catch(e){ $("#answer").textContent="Request failed: "+e.message; btn.disabled=false; return; }
+
+  // cinematic reveal
+  for(const st of steps){ await animateStep(st.agent_name, st.duration_ms); }
+  if(finalState){
+    renderMetrics(finalState);
+    renderEvidence(finalState);
+    await typeAnswer(finalState.final_response || "");
+  }
+  btn.disabled=false;
+}
+
+async function loadMode(){
+  try{ const h=await (await fetch("/v1/health")).json();
+    $("#modeVal").textContent = h.execution_mode==="live_gemini" ? "Live Gemini" : "Offline (no key)";
+  }catch(e){ $("#modeVal").textContent="unknown"; }
+}
+
+buildFlow(); buildChips(); loadMode();
+$("#run").onclick = run;
+$("#q").addEventListener("keydown", e=>{ if(e.key==="Enter") run(); });
+</script>
+</body>
+</html>

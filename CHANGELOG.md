@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.5.0] - 2026-11-17
+
+### Added
+- Real-time web command center at `GET /`: a dark single-page UI with an animated
+  agent pipeline, live metrics, a streamed answer, and the SQL rows plus cited
+  policies. It consumes the SSE stream and works in both offline and live modes.
+
 ## [0.4.0] - 2026-11-17
 
 Production hardening.

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     GEN_AI_SYSTEM: str = "gemini"
 
     # --- Service / telemetry ------------------------------------------------
-    SERVICE_VERSION: str = "0.4.0"
+    SERVICE_VERSION: str = "0.5.0"
     OTEL_SERVICE_NAME: str = "nexusops-enterprise-gateway"
     DEPLOYMENT_ENV: str = "production-fde"
     # Set to an OTLP/HTTP collector URL (e.g. http://localhost:4318/v1/traces).

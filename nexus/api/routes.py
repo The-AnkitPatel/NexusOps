@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from nexus.agents.sql_agent import sql_agent
@@ -23,6 +24,12 @@ from nexus.telemetry.tracer import otlp_enabled
 router = APIRouter()
 
 MAX_QUERY_LEN = 2000
+_INDEX_HTML = Path(__file__).resolve().parent.parent / "web" / "index.html"
+
+
+@router.get("/", response_class=HTMLResponse)
+def index() -> HTMLResponse:
+    return HTMLResponse(_INDEX_HTML.read_text(encoding="utf-8"))
 
 
 class QueryRequest(BaseModel):

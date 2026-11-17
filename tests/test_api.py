@@ -9,6 +9,13 @@ from nexus.api.server import app
 client = TestClient(app)
 
 
+def test_root_serves_ui() -> None:
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert "NexusOps Command Center" in resp.text
+
+
 def test_health() -> None:
     resp = client.get("/v1/health")
     assert resp.status_code == 200
