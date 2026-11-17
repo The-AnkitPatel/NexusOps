@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   quality:
-    name: lint · types · tests (py${{ matrix.python-version }})
+    name: lint / types / tests (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

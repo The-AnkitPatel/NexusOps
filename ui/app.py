@@ -18,16 +18,16 @@ from nexus.telemetry.tracer import otlp_enabled
 st.set_page_config(page_title="NexusOps | Google Cloud FDE Gateway", page_icon="", layout="wide")
 
 # Header
-st.title("NexusOps — Forward Deployed Enterprise Agentic Gateway")
+st.title("NexusOps - Forward Deployed Enterprise Agentic Gateway")
 st.caption(
-    "Multi-agent orchestration · Hybrid retrieval (BM25 + TF-IDF via RRF) · Read-only SQL planning · OpenTelemetry GenAI telemetry"
+    "Multi-agent orchestration / Hybrid retrieval (BM25 + TF-IDF via RRF) / Read-only SQL planning / OpenTelemetry GenAI telemetry"
 )
 
 _mode = supervisor_agent.execution_mode
 _mode_label = "Live Gemini" if _mode == "live_gemini" else "Deterministic offline (no API key)"
 _otlp_label = "OTLP export: on" if otlp_enabled else "OTLP export: in-memory only"
 st.caption(
-    f"**Mode:** {_mode_label}  ·  {_otlp_label}  ·  token counts are *estimated* (~4 chars/token) in offline mode"
+    f"**Mode:** {_mode_label}  /  {_otlp_label}  /  token counts are *estimated* (~4 chars/token) in offline mode"
 )
 
 # Tabs
@@ -76,7 +76,7 @@ with tab_agent:
         col3.metric("Guardrail Status", state.guardrail_status)
         col4.metric("Est. Cost", f"${state.total_cost_usd:.6f}")
 
-        # Execution Trace — Gantt timeline + per-step table
+        # Execution Trace - Gantt timeline + per-step table
         st.markdown("#### Agent Execution Trace")
         trace_data = []
         gantt_rows = []
@@ -136,7 +136,7 @@ with tab_agent:
                         f"[{c.document_id}] {c.section_title} (RRF: {c.relevance_score})"
                     ):
                         st.caption(
-                            f"BM25 (sparse): {c.bm25_score}  ·  TF-IDF cosine (dense): {c.dense_score}"
+                            f"BM25 (sparse): {c.bm25_score}  /  TF-IDF cosine (dense): {c.dense_score}"
                         )
                         st.write(c.snippet)
             else:
@@ -193,6 +193,6 @@ with tab_data:
     with open(settings.POLICIES_PATH) as f:
         policies = json.load(f)
     for p in policies:
-        with st.expander(f"{p['id']} — {p['title']}"):
+        with st.expander(f"{p['id']} - {p['title']}"):
             st.write(f"**Category:** `{p['category']}` | **Effective Date:** {p['effective_date']}")
             st.write(p["content"])
