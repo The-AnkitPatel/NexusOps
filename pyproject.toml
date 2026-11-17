@@ -1,9 +1,10 @@
 [project]
 name = "nexusops"
-version = "0.1.0"
-description = "Production Forward-Deployed Enterprise Agentic Gateway with OpenTelemetry Telemetry and Vertex AI"
+version = "0.2.0"
+description = "Offline-first Forward-Deployed enterprise agentic gateway: hybrid retrieval (BM25 + TF-IDF via RRF), read-only SQL planning, grounding guardrails, and OpenTelemetry GenAI telemetry."
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
@@ -11,18 +12,50 @@ dependencies = [
     "pydantic-settings>=2.5.0",
     "opentelemetry-api>=1.27.0",
     "opentelemetry-sdk>=1.27.0",
-    "google-genai>=0.1.1",
-    "httpx>=0.27.0",
-    "streamlit>=1.39.0",
     "numpy>=1.26.0",
     "python-dotenv>=1.0.1",
+    "httpx>=0.27.0",
     "requests>=2.32.0",
+    "streamlit>=1.39.0",
+]
+
+[project.optional-dependencies]
+# Live-LLM synthesis (requires GEMINI_API_KEY). Offline mode needs none of this.
+llm = ["google-genai>=0.1.1"]
+# Real OTLP/HTTP span export to a collector (Jaeger, Tempo, Cloud Trace).
+otlp = ["opentelemetry-exporter-otlp-proto-http>=1.27.0"]
+dev = [
+    "pytest>=8.3.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "pre-commit>=3.8.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["nexus"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["E501"]  # long lines in SQL templates are intentional and readable
+
+[tool.mypy]
+python_version = "3.11"
+files = ["nexus"]
+ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
