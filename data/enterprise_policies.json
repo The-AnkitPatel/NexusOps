@@ -1,0 +1,30 @@
+[
+  {
+    "id": "POL-SLA-001",
+    "title": "Google Cloud Enterprise Service Level Agreement (SLA) & Uptime Commitment",
+    "category": "SLA_COMPLIANCE",
+    "content": "For Google Cloud Compute Engine and Cloud SQL High Availability instances, the Monthly Uptime Percentage commitment is 99.99%. If uptime falls between 99.0% and 99.99%, customer is entitled to a 10% Financial Credit. If uptime drops below 99.0%, a 25% Financial Credit applies. Credit claims must be submitted within 30 days of the incident with timestamped outage telemetry logs.",
+    "effective_date": "2026-01-01"
+  },
+  {
+    "id": "POL-SEC-002",
+    "title": "Enterprise Data Sovereignty and PII Masking Standards",
+    "category": "SECURITY_COMPLIANCE",
+    "content": "All personal identifiers (Aadhaar, SSN, Credit Card numbers, patient diagnostic records) must undergo deterministic irreversible tokenization or regex masking before ingest into LLM context windows. No unencrypted PII may be serialized into Cloud Logging or external trace telemetry. Violations trigger an immediate P0 audit.",
+    "effective_date": "2026-02-15"
+  },
+  {
+    "id": "POL-INC-003",
+    "title": "Severity-1 (P0/P1) Incident Escalation Protocol for Forward Deployed Teams",
+    "category": "INCIDENT_MANAGEMENT",
+    "content": "A P1 critical outage constitutes total loss of customer transaction processing or telemetry ingestion degradation exceeding 15 minutes. The Forward Deployed Engineer (FDE) must acknowledge within 10 minutes, engage the Google Cloud incident commander, and establish a dedicated customer war-room with hourly status bulletins.",
+    "effective_date": "2026-03-01"
+  },
+  {
+    "id": "POL-FIN-004",
+    "title": "Enterprise Cloud Migration & Resource Reallocation Billing Policy",
+    "category": "BILLING_OPERATIONS",
+    "content": "Enterprise Tier-1 clients under an annual Committed Use Contract (CUD) receive automatic sustained-use discounts of 30% across GKE and BigQuery reservations. Unused compute credits roll over for 90 days. Over-provisioned GPU nodes will be auto-cordoned if average memory occupancy falls below 15% for 4 consecutive hours.",
+    "effective_date": "2026-04-10"
+  }
+]
