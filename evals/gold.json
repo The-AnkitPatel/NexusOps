@@ -1,0 +1,19 @@
+[
+  {"query": "What is the uptime SLA for Cloud SQL High Availability?", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-SLA-001"], "needs_sql": false},
+  {"query": "What are the financial credit thresholds when uptime drops?", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-SLA-001"], "needs_sql": false},
+  {"query": "How must PII and personal identifiers be masked before LLM ingest?", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-SEC-002"], "needs_sql": false},
+  {"query": "Explain the enterprise data sovereignty and tokenization standard", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-SEC-002"], "needs_sql": false},
+  {"query": "What is the P1 incident escalation protocol for forward deployed engineers?", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-INC-003"], "needs_sql": false},
+  {"query": "Severity-1 war room hourly status bulletins requirements", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-INC-003"], "needs_sql": false},
+  {"query": "Explain the committed use discount billing policy", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-FIN-004"], "needs_sql": false},
+  {"query": "Sustained use discounts for GKE and BigQuery reservations", "intent": "DOCUMENT_LOOKUP", "relevant_docs": ["POL-FIN-004"], "needs_sql": false},
+  {"query": "Show all incident tickets for Apollo Global Healthcare", "intent": "SQL_QUERY", "relevant_docs": [], "needs_sql": true},
+  {"query": "List incident tickets for FinSecure Bharat Bank", "intent": "SQL_QUERY", "relevant_docs": [], "needs_sql": true},
+  {"query": "Identify top enterprise accounts by MRR and their assigned FDE", "intent": "SQL_QUERY", "relevant_docs": [], "needs_sql": true},
+  {"query": "Total downtime per client across all tickets", "intent": "SQL_QUERY", "relevant_docs": [], "needs_sql": true},
+  {"query": "Does Apollo qualify for an SLA credit on their P1 Cloud SQL ticket?", "intent": "HYBRID_REASONING", "relevant_docs": ["POL-SLA-001"], "needs_sql": true},
+  {"query": "Is FinSecure eligible for financial credit given their P0 outage per the SLA policy?", "intent": "HYBRID_REASONING", "relevant_docs": ["POL-SLA-001"], "needs_sql": true},
+  {"query": "Which accounts had incidents, and what is the PII masking standard that applies?", "intent": "HYBRID_REASONING", "relevant_docs": ["POL-SEC-002"], "needs_sql": true},
+  {"query": "Show the open P1 tickets and the escalation protocol that governs them", "intent": "HYBRID_REASONING", "relevant_docs": ["POL-INC-003"], "needs_sql": true},
+  {"query": "Top MRR accounts and the committed use discount policy they fall under", "intent": "HYBRID_REASONING", "relevant_docs": ["POL-FIN-004"], "needs_sql": true}
+]

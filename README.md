@@ -120,6 +120,36 @@ make check      # == ruff check . && mypy && pytest
 
 ---
 
+## 📊 Benchmarks
+
+Measured on a 17-query labelled set (`evals/gold.json`) — fully offline, deterministic:
+
+<!-- benchmarks:start -->
+
+| Metric | Value |
+|---|---|
+| Dataset size | 17 queries |
+| Intent routing accuracy | 88% |
+| Retrieval Precision@1 | 92% |
+| Retrieval Recall@3 | 100% |
+| Retrieval MRR | 0.962 |
+| SQL success rate | 100% |
+| Grounding pass rate | 94% |
+| Mean latency | 0.51 ms |
+| p95 latency | 0.96 ms |
+
+_Reproduce: `make eval`. Fully offline, no API key._
+
+<!-- benchmarks:end -->
+
+> **Honest limitation the eval surfaces:** intent routing is a keyword heuristic, so
+> product names like "Cloud **SQL**" and severities like "**P1**" occasionally
+> over-trigger the SQL path (it still retrieves the right policy — it just does
+> extra work). This is exactly what the optional live-Gemini router improves; the
+> deterministic router stays as the zero-cost, zero-dependency default.
+
+---
+
 ## 📡 API
 
 | Method | Path | Purpose |

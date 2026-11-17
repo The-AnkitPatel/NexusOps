@@ -28,3 +28,6 @@ data/enterprise_tickets.db
 .DS_Store
 .idea/
 .vscode/
+
+# Generated eval results (reproduce with: make eval)
+evals/results.json

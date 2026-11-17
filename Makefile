@@ -1,4 +1,4 @@
-.PHONY: help install dev init-db test lint fmt type check run-api run-ui docker-build docker-up clean
+.PHONY: help install dev init-db test eval lint fmt type check run-api run-ui docker-build docker-up clean
 
 PY ?= python
 
@@ -27,6 +27,9 @@ init-db:
 
 test:
 	$(PY) -m pytest
+
+eval:
+	$(PY) -m evals.run_eval --update-readme
 
 lint:
 	ruff check .
