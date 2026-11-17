@@ -55,6 +55,33 @@ def test_stream_endpoint_emits_sse_events() -> None:
     assert "event: done" in body
 
 
-def test_request_id_header_present() -> None:
+def test_request_id_and_security_headers() -> None:
     resp = client.get("/v1/health")
     assert resp.headers.get("X-Request-ID")
+    assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert resp.headers.get("X-Frame-Options") == "DENY"
+
+
+def test_liveness_and_readiness_probes() -> None:
+    assert client.get("/livez").json() == {"status": "alive"}
+    ready = client.get("/readyz")
+    assert ready.status_code == 200
+    assert ready.json() == {"status": "ready"}
+
+
+def test_prometheus_metrics_endpoint() -> None:
+    client.get("/v1/health")  # generate at least one request sample
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    assert "nexus_http_requests_total" in resp.text
+
+
+def test_oversized_query_rejected() -> None:
+    resp = client.post("/v1/agent/query", json={"query": "x" * 5000})
+    assert resp.status_code == 422
+
+
+def test_guardrail_error_returns_400_envelope() -> None:
+    resp = client.post("/v1/agent/query", json={"query": "DROP TABLE accounts"})
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "guardrail_blocked"

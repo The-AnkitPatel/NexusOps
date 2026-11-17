@@ -7,21 +7,26 @@ from collections.abc import Iterator
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import Response, StreamingResponse
+from pydantic import BaseModel, Field
 
+from nexus.agents.sql_agent import sql_agent
 from nexus.agents.supervisor import supervisor_agent
 from nexus.config import settings
+from nexus.rag.document_store import document_store
 from nexus.rag.hybrid_search import hybrid_retriever
 from nexus.state import NexusState
+from nexus.telemetry import prometheus
 from nexus.telemetry.metrics import metrics_collector
 from nexus.telemetry.tracer import otlp_enabled
 
 router = APIRouter()
 
+MAX_QUERY_LEN = 2000
+
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=MAX_QUERY_LEN)
     session_id: str | None = None
 
 
@@ -72,3 +77,26 @@ def healthcheck() -> dict[str, Any]:
         "dense_embedder": hybrid_retriever.embedder.name,
         "otlp_export_enabled": otlp_enabled,
     }
+
+
+@router.get("/livez")
+def livez() -> dict[str, str]:
+    return {"status": "alive"}
+
+
+@router.get("/readyz")
+def readyz() -> dict[str, str]:
+    try:
+        sql_agent.introspect_schema()
+        ready = bool(document_store.get_all()) and len(hybrid_retriever.docs) > 0
+    except Exception:
+        ready = False
+    if not ready:
+        raise HTTPException(status_code=503, detail="Dependencies not ready.")
+    return {"status": "ready"}
+
+
+@router.get("/metrics")
+def metrics() -> Response:
+    payload, content_type = prometheus.render()
+    return Response(content=payload, media_type=content_type)

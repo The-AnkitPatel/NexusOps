@@ -3,9 +3,30 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.3.0] — 2026-11-17
+## [0.4.0] - 2026-11-17
 
-Theme: **from honest to standout — measurement, real observability, and extensibility.**
+Production hardening.
+
+### Added
+- Kubernetes-style probes: `GET /livez`, `GET /readyz`.
+- Prometheus metrics at `GET /metrics` (request count + latency histogram).
+- Consistent JSON error envelope: `SQLGuardrailError` returns 400, unhandled
+  errors return 500 (logged, no stack-trace leak).
+- Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy).
+- Request limit: `query` capped at 2000 chars (returns 422).
+- Graceful shutdown: OTel spans flushed via the app lifespan.
+
+### Fixed
+- Retriever falls back to TF-IDF if a dense embedder fails at startup (was a
+  possible import-time crash in live mode).
+- CORS: credentials disabled with a wildcard origin.
+
+### Changed
+- Version 0.4.0; test suite 33 -> 37.
+
+## [0.3.0] - 2026-11-17
+
+Theme: from honest to standout - measurement, real observability, and extensibility.
 
 ### Added
 - **Evaluation harness** (`evals/`): a 17-query labelled set and a runner that
