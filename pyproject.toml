@@ -1,6 +1,6 @@
 [project]
 name = "nexusops"
-version = "0.2.0"
+version = "0.3.0"
 description = "Offline-first Forward-Deployed enterprise agentic gateway: hybrid retrieval (BM25 + TF-IDF via RRF), read-only SQL planning, grounding guardrails, and OpenTelemetry GenAI telemetry."
 readme = "README.md"
 requires-python = ">=3.11"

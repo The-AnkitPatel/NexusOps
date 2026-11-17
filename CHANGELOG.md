@@ -3,6 +3,30 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] — 2026-11-17
+
+Theme: **from honest to standout — measurement, real observability, and extensibility.**
+
+### Added
+- **Evaluation harness** (`evals/`): a 17-query labelled set and a runner that
+  reports intent accuracy, retrieval Precision@1 / Recall@k / MRR, SQL success,
+  grounding pass-rate, and latency. `make eval` fills the README Benchmarks block;
+  a pytest regression-guards the metrics. (88% intent, 92% P@1, 100% Recall@3, 0.962 MRR.)
+- **Observability stack**: `docker compose up` now also starts an **OpenTelemetry
+  Collector + Jaeger**; the gateway exports OTLP and traces are viewable at `:16686`.
+- **Pluggable dense embeddings** (`nexus/rag/embeddings.py`): an `EmbeddingProvider`
+  Protocol with `TfidfEmbedder` (offline default) and a key-gated `GeminiEmbedder`
+  that degrades gracefully; `/v1/health` reports the active embedder.
+- **Optional live-Gemini intent routing** with the keyword classifier as a
+  guaranteed fallback. The LLM only routes — executable SQL stays deterministic.
+- **SSE streaming** endpoint `POST /v1/agent/query/stream`.
+- **Request-id + structured access-log** middleware (`X-Request-ID`).
+- **UI**: the execution trace now renders as an Altair **Gantt timeline**.
+
+### Changed
+- Version `0.3.0`; test suite **27 → 32** (+ the eval regression guard); README gains
+  Benchmarks and Observability sections.
+
 ## [0.2.0] — 2026-11-17
 
 Theme: **make every headline claim real and honest, and wrap it in production rigor.**

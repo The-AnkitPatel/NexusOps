@@ -13,7 +13,7 @@
 <img alt="Python" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white">
 <img alt="Lint" src="https://img.shields.io/badge/lint-ruff-261230?logo=ruff&logoColor=white">
 <img alt="Types" src="https://img.shields.io/badge/types-mypy-1F5082">
-<img alt="Tests" src="https://img.shields.io/badge/tests-27%20passing-brightgreen">
+<img alt="Tests" src="https://img.shields.io/badge/tests-32%20passing-brightgreen">
 <img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue">
 </p>
 
@@ -28,8 +28,10 @@ the opposite way — **honest and reproducible**:
 | Claim | What it actually is | Honest? |
 |---|---|---|
 | Hybrid retrieval | **Real Okapi BM25** + **real TF-IDF cosine**, fused with **RRF (k=60)**, computed on numpy | ✅ exact, textbook |
+| Dense embeddings | Pluggable `EmbeddingProvider`: TF-IDF default, real **Gemini embeddings** opt-in | ✅ extensible |
+| Evaluation | A labelled set + measured **Precision@1 / Recall@k / MRR / grounding** (`make eval`) | ✅ measured |
 | SQL agent | **Deterministic schema-aware planner** → vetted read-only `SELECT` templates, executed on a `mode=ro` connection | ✅ zero injection surface |
-| Intent routing | Deterministic keyword classifier (fast, free, auditable) | ✅ named as such |
+| Intent routing | Deterministic keyword classifier; optional **live Gemini** routing | ✅ named as such |
 | Grounding guardrail | Transparent **token-overlap proxy** + regex PII masking | ✅ labelled a proxy |
 | Token / cost accounting | **Estimated** from real text (~4 chars/token) in offline mode | ✅ labelled estimated |
 | OpenTelemetry | Real spans on GenAI semantic conventions; **real OTLP/HTTP export** when a collector is configured | ✅ |
@@ -110,7 +112,7 @@ docker compose up --build    # API :8000, UI :8501
 make check      # == ruff check . && mypy && pytest
 ```
 
-- **27 tests** (`pytest`) covering BM25/TF-IDF correctness, RRF retrieval,
+- **32 tests** (`pytest`) covering BM25/TF-IDF correctness, RRF retrieval,
   read-only SQL guardrails (incl. engine-level write rejection), intent routing,
   the FastAPI contract, and OTel span emission.
 - **ruff** (lint + import order + format) and **mypy** (typed `nexus/` package).
@@ -135,8 +137,8 @@ Measured on a 17-query labelled set (`evals/gold.json`) — fully offline, deter
 | Retrieval MRR | 0.962 |
 | SQL success rate | 100% |
 | Grounding pass rate | 94% |
-| Mean latency | 0.51 ms |
-| p95 latency | 0.96 ms |
+| Mean latency | 0.53 ms |
+| p95 latency | 1.1 ms |
 
 _Reproduce: `make eval`. Fully offline, no API key._
 
@@ -155,6 +157,7 @@ _Reproduce: `make eval`. Fully offline, no API key._
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/v1/agent/query` | Run the multi-agent pipeline; returns full `NexusState` with citations, SQL, trace, tokens & cost |
+| `POST` | `/v1/agent/query/stream` | Same pipeline, streamed as Server-Sent Events (per-agent trace, then final state) |
 | `GET` | `/v1/telemetry/metrics` | p50/p95/p99 latency, total tokens, cost, guardrail-intercept rate |
 | `GET` | `/v1/telemetry/traces` | Recent execution trace summaries |
 | `GET` | `/v1/health` | Status, version, execution mode, OTLP state |
@@ -211,24 +214,26 @@ All optional — the gateway runs with none set. See [`.env.example`](.env.examp
 ```
 nexus/
   agents/       supervisor · sql_agent (read-only planner) · retriever · guardrail
-  rag/          hybrid_search (Okapi BM25 + TF-IDF cosine + RRF) · document_store
+  rag/          hybrid_search (BM25 + RRF) · embeddings (pluggable) · document_store
   telemetry/    tracer (OTel + OTLP) · metrics · cost_calculator (token estimate)
-  api/          FastAPI server + routes
+  api/          FastAPI server (SSE, request-id) + routes
   config.py     typed settings   ·   logging.py   structured JSON logs   ·   state.py
-tests/          27 tests (agents · hybrid search · SQL guardrails · telemetry · API)
-ui/app.py       Streamlit cockpit
-data/           init_db.py · enterprise_policies.json
+evals/          gold.json + run_eval.py (offline benchmark harness)
+tests/          32 tests (agents · hybrid search · SQL guardrails · telemetry · API · evals)
+ui/app.py       Streamlit cockpit (Gantt trace timeline)
+deploy/         otel-collector-config.yaml   ·   data/   init_db.py · policies
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-- Swap the TF-IDF dense channel for real embeddings (Vertex AI / `text-embedding`)
-  behind the same `HybridRetriever` interface.
-- Replace the keyword router + SQL planner with Gemini function-calling, keeping
-  the deterministic path as a guaranteed fallback.
-- Ship spans to Google Cloud Trace via the OpenTelemetry Collector.
+- Make the Gemini embedder the default dense channel in a cloud deployment (the
+  `EmbeddingProvider` interface and adapter already exist — just needs a key).
+- Extend live-Gemini routing to entity extraction, while keeping executable SQL
+  on the deterministic read-only planner (no LLM-to-SQL path, by design).
+- Point the bundled OTel Collector at **Google Cloud Trace** for a managed backend.
+- Grow `evals/gold.json` and gate CI on the benchmark thresholds.
 
 ---
 
