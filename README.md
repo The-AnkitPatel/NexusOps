@@ -1,4 +1,4 @@
-# 🛡️ NexusOps — Forward-Deployed Enterprise Agentic Gateway
+# NexusOps — Forward-Deployed Enterprise Agentic Gateway
 
 > A multi-agent enterprise gateway that answers operational questions over
 > **structured** (SQLite incident/account data) and **unstructured** (Cloud SLA &
@@ -19,7 +19,7 @@
 
 ---
 
-## ✨ Why this project is different
+## Why this project is different
 
 Most "agentic RAG" demos either need a paid API key to run at all, or hide
 keyword matching behind words like *semantic* and *synthesis*. NexusOps is built
@@ -27,20 +27,20 @@ the opposite way — **honest and reproducible**:
 
 | Claim | What it actually is | Honest? |
 |---|---|---|
-| Hybrid retrieval | **Real Okapi BM25** + **real TF-IDF cosine**, fused with **RRF (k=60)**, computed on numpy | ✅ exact, textbook |
-| Dense embeddings | Pluggable `EmbeddingProvider`: TF-IDF default, real **Gemini embeddings** opt-in | ✅ extensible |
-| Evaluation | A labelled set + measured **Precision@1 / Recall@k / MRR / grounding** (`make eval`) | ✅ measured |
-| SQL agent | **Deterministic schema-aware planner** → vetted read-only `SELECT` templates, executed on a `mode=ro` connection | ✅ zero injection surface |
-| Intent routing | Deterministic keyword classifier; optional **live Gemini** routing | ✅ named as such |
-| Grounding guardrail | Transparent **token-overlap proxy** + regex PII masking | ✅ labelled a proxy |
-| Token / cost accounting | **Estimated** from real text (~4 chars/token) in offline mode | ✅ labelled estimated |
-| OpenTelemetry | Real spans on GenAI semantic conventions; **real OTLP/HTTP export** when a collector is configured | ✅ |
+| Hybrid retrieval | **Real Okapi BM25** + **real TF-IDF cosine**, fused with **RRF (k=60)**, computed on numpy | exact, textbook |
+| Dense embeddings | Pluggable `EmbeddingProvider`: TF-IDF default, real **Gemini embeddings** opt-in | extensible |
+| Evaluation | A labelled set + measured **Precision@1 / Recall@k / MRR / grounding** (`make eval`) | measured |
+| SQL agent | **Deterministic schema-aware planner** -> vetted read-only `SELECT` templates, executed on a `mode=ro` connection | zero injection surface |
+| Intent routing | Deterministic keyword classifier; optional **live Gemini** routing | named as such |
+| Grounding guardrail | Transparent **token-overlap proxy** + regex PII masking | labelled a proxy |
+| Token / cost accounting | **Estimated** from real text (~4 chars/token) in offline mode | labelled estimated |
+| OpenTelemetry | Real spans on GenAI semantic conventions; **real OTLP/HTTP export** when a collector is configured | |
 
 Nothing here pretends to be a neural model or a live LLM call when it isn't.
 
 ---
 
-## 🏛️ Architecture
+## Architecture
 
 ```mermaid
 flowchart TD
@@ -52,7 +52,7 @@ flowchart TD
         Sup -->|DOCUMENT_LOOKUP| RAG[Hybrid Retriever]
         Sup -->|HYBRID_REASONING| Both[SQL + RAG]
         SQL --> DB[(SQLite · mode=ro)]
-        RAG --> Index[(BM25 ⊕ TF-IDF → RRF)]
+        RAG --> Index[(BM25 ⊕ TF-IDF -> RRF)]
     end
 
     SQL --> Synth[Synthesis: deterministic template, or live Gemini if key set]
@@ -69,12 +69,12 @@ flowchart TD
     end
 ```
 
-**Pipeline:** classify intent → retrieve (BM25+TF-IDF+RRF) and/or plan+run SQL →
-synthesize → verify grounding + mask PII → record span & metrics.
+**Pipeline:** classify intent -> retrieve (BM25+TF-IDF+RRF) and/or plan+run SQL ->
+synthesize -> verify grounding + mask PII -> record span & metrics.
 
 ---
 
-## 🚀 Quickstart (offline — no API key)
+## Quickstart (offline — no API key)
 
 ```bash
 git clone https://github.com/The-AnkitPatel/NexusOps.git
@@ -90,8 +90,8 @@ python data/init_db.py              # build the enterprise SQLite DB
 Run it:
 
 ```bash
-streamlit run ui/app.py                                 # interactive cockpit → :8501
-uvicorn nexus.api.server:app --reload --port 8000       # REST gateway  → :8000/docs
+streamlit run ui/app.py                                 # interactive cockpit -> :8501
+uvicorn nexus.api.server:app --reload --port 8000       # REST gateway  -> :8000/docs
 ```
 
 Or with Docker:
@@ -106,7 +106,7 @@ docker compose up --build    # API :8000, UI :8501
 
 ---
 
-## 🧪 Quality gates
+## Quality gates
 
 ```bash
 make check      # == ruff check . && mypy && pytest
@@ -122,7 +122,7 @@ make check      # == ruff check . && mypy && pytest
 
 ---
 
-## 📊 Benchmarks
+## Benchmarks
 
 Measured on a 17-query labelled set (`evals/gold.json`) — fully offline, deterministic:
 
@@ -152,7 +152,7 @@ _Reproduce: `make eval`. Fully offline, no API key._
 
 ---
 
-## 📡 API
+## API
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -170,7 +170,7 @@ curl -s localhost:8000/v1/agent/query \
 
 ---
 
-## 🔭 Observability
+## Observability
 
 Spans follow the OpenTelemetry **GenAI semantic conventions** and are always
 captured in-memory (the cockpit's live trace log). The composed stack also ships
@@ -183,7 +183,7 @@ Gateway ──OTLP/HTTP──▶ OpenTelemetry Collector ──OTLP──▶ Jae
 ```bash
 docker compose up --build        # starts API, UI, OTel Collector, Jaeger
 # run a query (UI :8501, or POST /v1/agent/query), then open:
-#   Jaeger UI → http://localhost:16686  (service: nexusops-enterprise-gateway)
+#   Jaeger UI -> http://localhost:16686  (service: nexusops-enterprise-gateway)
 ```
 
 Each query emits a `gen_ai.multi_agent_execution` span with
@@ -194,22 +194,22 @@ there instead.
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 All optional — the gateway runs with none set. See [`.env.example`](.env.example).
 
 | Variable | Default | Notes |
 |---|---|---|
-| `GEMINI_API_KEY` | *(empty)* | Set → live Gemini synthesis (`pip install ".[llm]"`) |
+| `GEMINI_API_KEY` | *(empty)* | Set -> live Gemini synthesis (`pip install ".[llm]"`) |
 | `NEXUS_MODEL` | `gemini-2.5-flash` | Synthesis model |
 | `GEN_AI_SYSTEM` | `gemini` | GenAI semconv system id (`gemini` / `vertex_ai`) |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty)* | Set → OTLP/HTTP export (`pip install ".[otlp]"`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty)* | Set -> OTLP/HTTP export (`pip install ".[otlp]"`) |
 | `LOG_LEVEL` | `INFO` | JSON structured logs |
 | `DATABASE_PATH` / `POLICIES_PATH` | `data/...` | Data sources |
 
 ---
 
-## 🗂️ Layout
+## Layout
 
 ```
 nexus/
@@ -226,7 +226,7 @@ deploy/         otel-collector-config.yaml   ·   data/   init_db.py · policies
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - Make the Gemini embedder the default dense channel in a cloud deployment (the
   `EmbeddingProvider` interface and adapter already exist — just needs a key).
@@ -237,6 +237,6 @@ deploy/         otel-collector-config.yaml   ·   data/   init_db.py · policies
 
 ---
 
-## 📄 License
+## License
 
 Apache-2.0 © 2026 Ankit Kumar Patel

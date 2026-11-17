@@ -15,16 +15,16 @@ from nexus.config import settings
 from nexus.telemetry.metrics import metrics_collector
 from nexus.telemetry.tracer import otlp_enabled
 
-st.set_page_config(page_title="NexusOps | Google Cloud FDE Gateway", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="NexusOps | Google Cloud FDE Gateway", page_icon="", layout="wide")
 
 # Header
-st.title("🛡️ NexusOps — Forward Deployed Enterprise Agentic Gateway")
+st.title("NexusOps — Forward Deployed Enterprise Agentic Gateway")
 st.caption(
     "Multi-agent orchestration · Hybrid retrieval (BM25 + TF-IDF via RRF) · Read-only SQL planning · OpenTelemetry GenAI telemetry"
 )
 
 _mode = supervisor_agent.execution_mode
-_mode_label = "🟢 Live Gemini" if _mode == "live_gemini" else "⚙️ Deterministic offline (no API key)"
+_mode_label = "Live Gemini" if _mode == "live_gemini" else "Deterministic offline (no API key)"
 _otlp_label = "OTLP export: on" if otlp_enabled else "OTLP export: in-memory only"
 st.caption(
     f"**Mode:** {_mode_label}  ·  {_otlp_label}  ·  token counts are *estimated* (~4 chars/token) in offline mode"
@@ -32,7 +32,7 @@ st.caption(
 
 # Tabs
 tab_agent, tab_telemetry, tab_data = st.tabs(
-    ["🤖 Agent Command Center", "📊 OpenTelemetry & Cost Analytics", "🗄️ Enterprise Data Readiness"]
+    ["Agent Command Center", "OpenTelemetry & Cost Analytics", "Enterprise Data Readiness"]
 )
 
 # ----------------- TAB 1: AGENT COMMAND CENTER -----------------
@@ -61,7 +61,7 @@ with tab_agent:
         else:
             query = st.text_input("Enter Enterprise Query:", value=preset)
 
-    if st.button("🚀 Execute Multi-Agent Workflow", type="primary"):
+    if st.button("Execute Multi-Agent Workflow", type="primary"):
         with st.spinner("Orchestrating agents & recording OpenTelemetry spans..."):
             state = supervisor_agent.process(query)
 
@@ -77,7 +77,7 @@ with tab_agent:
         col4.metric("Est. Cost", f"${state.total_cost_usd:.6f}")
 
         # Execution Trace — Gantt timeline + per-step table
-        st.markdown("#### ⚡ Agent Execution Trace")
+        st.markdown("#### Agent Execution Trace")
         trace_data = []
         gantt_rows = []
         elapsed = 0.0
@@ -120,7 +120,7 @@ with tab_agent:
         # Context details
         col_sql, col_rag = st.columns(2)
         with col_sql:
-            st.markdown("##### 🗄️ Structured Database Evidence")
+            st.markdown("##### Structured Database Evidence")
             if state.sql_query:
                 st.code(state.sql_query, language="sql")
             if state.sql_results:
@@ -129,11 +129,11 @@ with tab_agent:
                 st.info("No SQL database query required for this intent.")
 
         with col_rag:
-            st.markdown("##### 📄 Verified Grounded Citations")
+            st.markdown("##### Verified Grounded Citations")
             if state.retrieved_citations:
                 for c in state.retrieved_citations:
                     with st.expander(
-                        f"📌 [{c.document_id}] {c.section_title} (RRF: {c.relevance_score})"
+                        f"[{c.document_id}] {c.section_title} (RRF: {c.relevance_score})"
                     ):
                         st.caption(
                             f"BM25 (sparse): {c.bm25_score}  ·  TF-IDF cosine (dense): {c.dense_score}"
@@ -143,7 +143,7 @@ with tab_agent:
                 st.info("No policy documents retrieved for this intent.")
 
         # Final Synthesized Report
-        st.markdown("#### 📝 Final Synthesized FDE Output")
+        st.markdown("#### Final Synthesized FDE Output")
         st.markdown(state.final_response)
 
 # ----------------- TAB 2: OPENTELEMETRY & COST ANALYTICS -----------------
@@ -163,7 +163,7 @@ with tab_telemetry:
         "conventions and also ship over OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is set."
     )
 
-    st.markdown("#### 📡 Real-Time Trace Log (OpenTelemetry InMemory Exporter)")
+    st.markdown("#### Real-Time Trace Log (OpenTelemetry InMemory Exporter)")
     if metrics_collector.traces:
         st.dataframe(pd.DataFrame(metrics_collector.traces), use_container_width=True)
     else:
@@ -176,23 +176,23 @@ with tab_data:
     ro_uri = f"file:{settings.DATABASE_PATH}?mode=ro"
     col_d1, col_d2 = st.columns(2)
     with col_d1:
-        st.markdown("##### 🏢 Accounts & MRR")
+        st.markdown("##### Accounts & MRR")
         conn = sqlite3.connect(ro_uri, uri=True)
         df_acc = pd.read_sql_query("SELECT * FROM accounts", conn)
         st.dataframe(df_acc, use_container_width=True)
         conn.close()
 
     with col_d2:
-        st.markdown("##### 🎫 Incident Tickets")
+        st.markdown("##### Incident Tickets")
         conn = sqlite3.connect(ro_uri, uri=True)
         df_tck = pd.read_sql_query("SELECT * FROM incident_tickets", conn)
         st.dataframe(df_tck, use_container_width=True)
         conn.close()
 
-    st.markdown("##### 📜 Ingested Cloud Policies & SLAs")
+    st.markdown("##### Ingested Cloud Policies & SLAs")
     with open(settings.POLICIES_PATH) as f:
         policies = json.load(f)
     for p in policies:
-        with st.expander(f"📘 {p['id']} — {p['title']}"):
+        with st.expander(f"{p['id']} — {p['title']}"):
             st.write(f"**Category:** `{p['category']}` | **Effective Date:** {p['effective_date']}")
             st.write(p["content"])

@@ -24,7 +24,7 @@ Theme: **from honest to standout — measurement, real observability, and extens
 - **UI**: the execution trace now renders as an Altair **Gantt timeline**.
 
 ### Changed
-- Version `0.3.0`; test suite **27 → 32** (+ the eval regression guard); README gains
+- Version `0.3.0`; test suite **27 -> 32** (+ the eval regression guard); README gains
   Benchmarks and Observability sections.
 
 ## [0.2.0] — 2026-11-17
@@ -40,7 +40,7 @@ Theme: **make every headline claim real and honest, and wrap it in production ri
   per-channel `bm25_score` and `dense_score`. Pure numpy, no new dependency.
 
 ### Changed — SQL agent is honest and safer
-- Renamed "synthesizer" → **deterministic schema-aware planner** (it maps intents
+- Renamed "synthesizer" -> **deterministic schema-aware planner** (it maps intents
   to vetted templates; it is not an LLM, and no longer claims to be).
 - Execution now uses a **read-only `mode=ro` connection** + `PRAGMA query_only`,
   plus a single-statement `SELECT`/`WITH` check and a forbidden-keyword scan.
@@ -59,7 +59,7 @@ Theme: **make every headline claim real and honest, and wrap it in production ri
 - GitHub Actions CI (lint · format · types · tests on 3.11/3.12 + Docker build).
 - `ruff` + `mypy` configuration, `pre-commit` hooks, and a `Makefile`.
 - Structured JSON logging (`nexus/logging.py`); `print()` calls removed.
-- Test suite expanded **8 → 27** tests; added `conftest.py`, API contract tests,
+- Test suite expanded **8 -> 27** tests; added `conftest.py`, API contract tests,
   SQL-guardrail tests, and retrieval-correctness tests.
 - Hardened `Dockerfile` (non-root user + healthcheck); cleaned `docker-compose.yml`.
 - `.gitignore` added; the generated SQLite DB is no longer tracked.
