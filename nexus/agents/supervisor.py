@@ -72,6 +72,19 @@ class SupervisorAgent:
                 logger.warning("Failed to initialise Google GenAI client: %s", exc)
 
     def _classify_intent(self, query: str) -> str:
+        """Route the query. Uses Gemini when available, else the keyword classifier.
+
+        Note: the LLM only *routes*; it never emits SQL. Executable SQL always comes
+        from the deterministic, read-only planner -- so there is no LLM-injection path.
+        """
+        if self.client is not None:
+            label = self._classify_intent_llm(query)
+            if label is not None:
+                return label
+        return self._classify_intent_keywords(query)
+
+    @staticmethod
+    def _classify_intent_keywords(query: str) -> str:
         q = query.lower()
         has_sql = any(k in q for k in SQL_KEYWORDS)
         has_doc = any(k in q for k in DOC_KEYWORDS)
@@ -80,6 +93,28 @@ class SupervisorAgent:
         if has_sql:
             return "SQL_QUERY"
         return "DOCUMENT_LOOKUP"
+
+    def _classify_intent_llm(self, query: str) -> str | None:
+        """Classify intent with Gemini; return None to fall back to keywords."""
+        if self.client is None:
+            return None
+        prompt = (
+            "Classify the enterprise query into exactly one label:\n"
+            "- SQL_QUERY: needs the incident/account database only\n"
+            "- DOCUMENT_LOOKUP: needs SLA/policy documents only\n"
+            "- HYBRID_REASONING: needs both\n"
+            f"Query: {query}\n"
+            "Answer with only the label."
+        )
+        try:
+            resp = self.client.models.generate_content(model=settings.NEXUS_MODEL, contents=prompt)
+            text = (resp.text or "").strip().upper()
+            for label in ("HYBRID_REASONING", "SQL_QUERY", "DOCUMENT_LOOKUP"):
+                if label in text:
+                    return label
+        except Exception as exc:
+            logger.warning("LLM intent routing failed, using keywords: %s", exc)
+        return None
 
     def _synthesize_response(self, state: NexusState) -> tuple[str, str]:
         """Return (response_text, synthesis_prompt). Gemini if available, else template."""

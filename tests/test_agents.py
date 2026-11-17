@@ -48,3 +48,16 @@ def test_supervisor_document_only_path() -> None:
     assert state.intent == "DOCUMENT_LOOKUP"
     assert state.retrieved_citations
     assert state.sql_results is None
+
+
+def test_keyword_classifier_contract() -> None:
+    # The deterministic fallback used whenever no Gemini key is configured.
+    assert supervisor_agent._classify_intent_keywords("Show tickets for Apollo") == "SQL_QUERY"
+    assert (
+        supervisor_agent._classify_intent_keywords("PII masking standard POL-SEC-002")
+        == "DOCUMENT_LOOKUP"
+    )
+    assert (
+        supervisor_agent._classify_intent_keywords("Apollo SLA credit on their P1 ticket")
+        == "HYBRID_REASONING"
+    )
