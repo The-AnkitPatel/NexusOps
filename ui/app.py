@@ -3,6 +3,7 @@ import os
 import sqlite3
 import sys
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -75,10 +76,22 @@ with tab_agent:
         col3.metric("Guardrail Status", state.guardrail_status)
         col4.metric("Est. Cost", f"${state.total_cost_usd:.6f}")
 
-        # Execution Trace Flamegraph/Steps
+        # Execution Trace — Gantt timeline + per-step table
         st.markdown("#### ⚡ Agent Execution Trace")
         trace_data = []
+        gantt_rows = []
+        elapsed = 0.0
         for step in state.execution_trace:
+            gantt_rows.append(
+                {
+                    "Agent": step.agent_name,
+                    "Action": step.action,
+                    "start": elapsed,
+                    "end": elapsed + step.duration_ms,
+                    "ms": step.duration_ms,
+                }
+            )
+            elapsed += step.duration_ms
             trace_data.append(
                 {
                     "Agent": step.agent_name,
@@ -88,6 +101,20 @@ with tab_agent:
                     "Est. Cost ($)": round(step.estimated_cost_usd, 6),
                 }
             )
+
+        gantt = (
+            alt.Chart(pd.DataFrame(gantt_rows))
+            .mark_bar(cornerRadius=3, height=18)
+            .encode(
+                x=alt.X("start:Q", title="Elapsed (ms)"),
+                x2="end:Q",
+                y=alt.Y("Agent:N", sort=None, title=None),
+                color=alt.Color("Agent:N", legend=None),
+                tooltip=["Agent", "Action", "ms"],
+            )
+            .properties(height=160)
+        )
+        st.altair_chart(gantt, use_container_width=True)
         st.dataframe(pd.DataFrame(trace_data), use_container_width=True)
 
         # Context details
