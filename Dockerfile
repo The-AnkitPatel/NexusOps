@@ -11,8 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first for better layer caching.
+# The OTLP exporter is added here so the composed observability stack
+# (OTel Collector -> Jaeger) works; it stays optional for local offline runs.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    "opentelemetry-exporter-otlp-proto-http>=1.27.0"
 
 COPY . .
 

@@ -167,6 +167,30 @@ curl -s localhost:8000/v1/agent/query \
 
 ---
 
+## 🔭 Observability
+
+Spans follow the OpenTelemetry **GenAI semantic conventions** and are always
+captured in-memory (the cockpit's live trace log). The composed stack also ships
+them to a real backend you can click through:
+
+```
+Gateway ──OTLP/HTTP──▶ OpenTelemetry Collector ──OTLP──▶ Jaeger UI
+```
+
+```bash
+docker compose up --build        # starts API, UI, OTel Collector, Jaeger
+# run a query (UI :8501, or POST /v1/agent/query), then open:
+#   Jaeger UI → http://localhost:16686  (service: nexusops-enterprise-gateway)
+```
+
+Each query emits a `gen_ai.multi_agent_execution` span with
+`gen_ai.usage.input_tokens` / `output_tokens`, `nexus.usage.cost_usd`,
+`nexus.intent`, and `nexus.execution_mode`. Point `OTEL_EXPORTER_OTLP_ENDPOINT`
+at any OTLP collector (incl. the one fronting **Google Cloud Trace**) to export
+there instead.
+
+---
+
 ## ⚙️ Configuration
 
 All optional — the gateway runs with none set. See [`.env.example`](.env.example).
